@@ -3,13 +3,21 @@
 // TODO Shadow Dom?
 // TODO: Document Fragment?
 
+'use strict';
+
 /**
- * Rewind Time
+ * Rewind Time - This handy widget creates an input range element that constantly updates the time to the "present"
+ * It returns an object literal that allows you to register an event to "now".
+ *
  * @param element : Element we will render our rewind time widget in
  * @param renderTime : Optional Override for the time render
+ *
+ * @returns {{input: HTMLElement, isRewind: Function, registerEvent: Function}}
  */
 function rewindTime(element, renderTimeOverride) {
 
+	// Because native time rendering can differ from browser-to-browser, I made this instead.
+	// Feel free to overwrite it.
 	var renderTime = renderTimeOverride || function (myTime) {
 
 		var hours = myTime.getHours(),
@@ -36,8 +44,11 @@ function rewindTime(element, renderTimeOverride) {
 		inputAttributes = {
 			type: 'range',
 			min: 0,
-			max: 0
-		};
+			max: 1,
+			value: 1
+		},
+
+		eventMap = {};
 
 	// Update the text content for all our dom elements
 	[$start, $currentTime, $inputTime].forEach(function(timeElement) {
@@ -63,7 +74,7 @@ function rewindTime(element, renderTimeOverride) {
 		$wrapper.appendChild(rewindElement);
 	});
 
-	// Every second, run our "update" step
+	// Every second, run our "update" step again
 	setInterval(function() {
 		var maxTime = new Date(nowTime + $timeRange.max * 1000),
 			inputTime = new Date(nowTime + $timeRange.value * 1000);
@@ -73,5 +84,34 @@ function rewindTime(element, renderTimeOverride) {
 
 		$currentTime.textContent = renderTime(maxTime);
 		$inputTime.textContent = renderTime(inputTime);
+
+		// The widget's soul is right here:
+		if(eventMap[$timeRange.value]) {
+			eventMap[$timeRange.value].forEach(function(timeEvent) {
+				timeEvent();
+			});
+		}
+
 	}, 1000);
+
+	return {
+		input: $timeRange,
+
+		// If we need to check the state of our widget, this function can help
+		isRewind: function() {
+			return $timeRange.max !== $timeRange.value
+		},
+
+		// Register an event that can get retriggered when we rewind.
+		registerEvent: function(myEvent) {
+
+			// The max represents the most current version of "now"
+			var currentTime = $timeRange.max;
+			if (!eventMap[currentTime]) {
+				eventMap[currentTime] = [];
+			}
+			eventMap[currentTime].push(myEvent);
+			return currentTime;
+		}
+	};
 }

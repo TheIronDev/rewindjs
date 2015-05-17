@@ -5,10 +5,20 @@
     <script src="rewind.js"></script>
 </head>
 <body>
+
 	<div id="rewind"></div>
+    <p>In this example, an event has been registered at the ~2 second mark (rounding is annoying).</p>
+    <p>Feel free to rewind the input to replay the event</p>
 
     <script>
-        rewindTime('#rewind');
+        var myRewindExample = rewindTime('#rewind');
+
+        // Test right here
+        setTimeout(function() {
+            myRewindExample.registerEvent(function() {
+                alert('hello world');
+            });
+        }, 2500);
     </script>
 </body>
 </html>
