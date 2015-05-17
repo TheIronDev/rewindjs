@@ -1,38 +1,28 @@
 // TODO: Proper documentation
 // TODO: amd/commonjs?
 // TODO Shadow Dom?
-// TODO: Document Fragment?
 
 'use strict';
 
 /**
  * Rewind Time - This handy widget creates an input range element that constantly updates the time to the "present"
- * It returns an object literal that allows you to register an event to "now".
+ * It returns an object literal that allows you to register events to get triggered when you rewind.
  *
- * @param element : Element we will render our rewind time widget in
- * @param renderTime : Optional Override for the time render
+ * @param element           : Element we will render our rewind time widget in
+ * @param config            : Optional Configuration to update and alter this widget
+ *  @param renderTime       : Override for the time render. Defaults to a function that renders HH:MM:SS
+ *  @param tickDuration     : Override the amount of time to process next tick, defaults to 1000
+ *  @param classBlockName   : Override the class prepended to all the elements, defaults to "rewindjs"
  *
  * @returns {{input: HTMLElement, isRewind: Function, registerEvent: Function}}
  */
-function rewindTime(element, renderTimeOverride) {
+function rewindTime(element, config) {
 
-	// Because native time rendering can differ from browser-to-browser, I made this instead.
-	// Feel free to overwrite it.
-	var renderTime = renderTimeOverride || function (myTime) {
+	// Null safe-ing our config
+	config = config || {};
 
-		var hours = myTime.getHours(),
-			minutes = myTime.getMinutes(),
-			seconds = myTime.getSeconds();
-
-		return [
-			hours,
-			(minutes < 10 ? '0'+minutes : minutes),
-			(seconds < 10 ? '0'+seconds : seconds)
-		].join(':');
-	};
-
-	// TODO: consider abstracting this out or putting in dom fragment
-	var $wrapper = document.querySelector(element),
+	var fragment = document.createDocumentFragment(),
+		$wrapper = document.querySelector(element),
 		$start = document.createElement('span'),
 		$timeRange = document.createElement('input'),
 		$currentTime = document.createElement('span'),
@@ -48,11 +38,39 @@ function rewindTime(element, renderTimeOverride) {
 			value: 1
 		},
 
+		elements = {
+			wrapper: $wrapper,
+			start:$start,
+			timeRange:$timeRange,
+			currentTime:$currentTime,
+			inputTime: $inputTime
+		},
+
+		// Update Config-based variables (or fallback to defaults)
+		classBlockName = config.classBlockName || 'rewindjs',
+		tickDuration = config.tickDuration || 1000,
+		renderTime = config.renderTime || function (myTime) {
+				var hours = myTime.getHours(),
+					minutes = myTime.getMinutes(),
+					seconds = myTime.getSeconds();
+
+				return [
+					hours,
+					(minutes < 10 ? '0'+minutes : minutes),
+					(seconds < 10 ? '0'+seconds : seconds)
+				].join(':');
+			},
+
 		eventMap = {};
 
 	// Update the text content for all our dom elements
 	[$start, $currentTime, $inputTime].forEach(function(timeElement) {
 		timeElement.textContent = renderTime(now);
+	});
+
+	// Apply Classnames so the end-user can style
+	(Object.keys(elements)).forEach(function(elementName) {
+		elements[elementName].className = classBlockName +'_' + elementName;
 	});
 
 	// Set our rewind input's attributes
@@ -65,19 +83,19 @@ function rewindTime(element, renderTimeOverride) {
 
 		var currentValue = $timeRange.value,
 			tempValue = currentValue > 0 ? currentValue - 1 : currentValue,
-			inputTime = new Date(nowTime + tempValue * 1000);
+			inputTime = new Date(nowTime + tempValue * tickDuration);
 		$inputTime.textContent = renderTime(inputTime);
 	};
 
-	// Append rewind elements in order
+	// Append the rewindjs elements in order
 	[$start, $timeRange, $currentTime, $inputTime].forEach(function(rewindElement) {
-		$wrapper.appendChild(rewindElement);
+		fragment.appendChild(rewindElement);
 	});
+	$wrapper.appendChild(fragment);
 
-	// Every second, run our "update" step again
-	setInterval(function() {
-		var maxTime = new Date(nowTime + $timeRange.max * 1000),
-			inputTime = new Date(nowTime + $timeRange.value * 1000);
+	function processRewindJSNextTick() {
+		var maxTime = new Date(nowTime + $timeRange.max * tickDuration),
+			inputTime = new Date(nowTime + $timeRange.value * tickDuration);
 
 		$timeRange.max++;
 		$timeRange.value++;
@@ -86,18 +104,18 @@ function rewindTime(element, renderTimeOverride) {
 		$inputTime.textContent = renderTime(inputTime);
 
 		// The widget's soul is right here:
-		if(eventMap[$timeRange.value]) {
-			eventMap[$timeRange.value].forEach(function(timeEvent) {
-				timeEvent();
-			});
-		}
+		(eventMap[$timeRange.value] || []).forEach(function(timeEvent) {
+			timeEvent();
+		});
+	}
 
-	}, 1000);
+	// Every second, run our "update" step again
+	setInterval(processRewindJSNextTick, tickDuration);
 
 	return {
 		input: $timeRange,
 
-		// If we need to check the state of our widget, this function can help
+		// If we need to check the state of our widget, this function can help!
 		isRewind: function() {
 			return $timeRange.max !== $timeRange.value
 		},

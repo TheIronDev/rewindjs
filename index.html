@@ -1,14 +1,23 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>My Time Rewind Example</title>
+    <title>Rewind.js Example</title>
+    <meta name="keywords" content="Rewind Input, event tracking" />
+    <meta charset="UTF-8" />
+    <meta name="author" content="Tyler Stark">
     <script src="rewind.js"></script>
+    <style>
+        body {
+            text-align: center;
+            font-family: "Helvetica Neue Light", "HelveticaNeue-Light", "Helvetica Neue", Calibri, Helvetica, Arial
+        }
+    </style>
 </head>
 <body>
-
+    <h1>Rewind.js</h1>
 	<div id="rewind"></div>
     <p>In this example, an event has been registered at the ~2 second mark (rounding is annoying).</p>
-    <p>Feel free to rewind the input to replay the event</p>
+    <p>If you rewind back to the beginning, the event will repay at the time that it was registered</p>
 
     <script>
         var myRewindExample = rewindTime('#rewind');
